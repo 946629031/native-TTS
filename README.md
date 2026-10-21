@@ -18,10 +18,40 @@
 - 云端（国内可直连）：**MiniMax Speech 2.6 / 火山引擎豆包 TTS / 阿里云百炼 Qwen3-TTS**；ElevenLabs 表现力强但中文准确率明显偏弱。
 - 想要「同一个人自然地中英切换」，最有效的一招是：**用一段中英混合的参考音频做 zero-shot 音色克隆**，而不是给两种语言各配一个音色。
 
+## 本地跑通（已验证）
+
+模型：`Qwen3-TTS-12Hz-0.6B-CustomVoice-8bit`（MLX，1.29 GB）+ 自带 `speech_tokenizer`。
+
+```bash
+# 首次准备（已完成）
+python3 -m venv .venv
+.venv/bin/python -m pip install -U mlx-audio -i https://mirrors.aliyun.com/pypi/simple/
+.venv/bin/python scripts/fetch_modelscope.py \
+  mlx-community/Qwen3-TTS-12Hz-0.6B-CustomVoice-8bit \
+  models/Qwen3-TTS-12Hz-0.6B-CustomVoice-8bit
+
+# 合成本地音频
+.venv/bin/python scripts/say.py --norm \
+  "这个 API 的 latency 大概两百毫秒，完全可以接受。" \
+  --out outputs/smoke.wav
+afplay outputs/smoke.wav
+```
+
+实测（M2 / 24 GB）：
+
+| 项 | 结果 |
+| --- | --- |
+| 输出 | 4.88 s @ 24 kHz，峰值 0.66、RMS 0.11（非静音） |
+| 首次加载 | 约 30–60 s（含权重加载与编译） |
+| 显存/内存 | 模型常驻约 2 GB 级 |
+| RTF | 待批量测（`scripts/run_eval.py` 待补） |
+
+> `models/` 已在 `.gitignore` 中，权重不进仓库。
+
 ## 下一步
 
-1. 用 `eval/cases-zh-en.md` 在 2–3 个候选上各跑一轮盲听（先 API，后本地）。
-2. 打通本地 Qwen3-TTS 0.6B（MLX）推理脚本。
+1. 用 `eval/cases-zh-en.md` 跑完整 30 条，测 RTF 与中英边界听感。
+2. 按听感决定：内置音色够用 / 需要双语参考音频克隆。
 3. 根据听感确定架构（纯本地 / 纯云 / 本地兜底 + 云端高质量）。
 
 ## 环境备注（本机网络实测）

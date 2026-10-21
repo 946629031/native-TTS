@@ -16,6 +16,7 @@ import json
 import math
 import subprocess
 import sys
+import time
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
@@ -63,21 +64,30 @@ def download_parallel(url: str, out: Path, size: int, conn: int):
 
     def worker(i: int, start: int, end: int):
         part = tmp.with_name(f"{tmp.name}.{i:03d}")
-        for attempt in range(4):
+        expect = end - start + 1
+        for attempt in range(6):
+            have = part.stat().st_size if part.exists() else 0
+            if have >= expect:
+                return
+            if have:
+                print(f"    resume chunk {i} at {have}/{expect}", flush=True)
             try:
-                run(
-                    [
-                        "curl", "-4", "-fL", "-sS", "--retry", "2",
-                        "--connect-timeout", "20", "-r", f"{start}-{end}",
-                        direct, "-o", str(part),
-                    ]
-                )
-                expect = end - start + 1
+                with part.open("ab") as fh:
+                    run(
+                        [
+                            "curl", "-4", "-fL", "-sS", "--retry", "2",
+                            "--connect-timeout", "20",
+                            "--speed-limit", "1024", "--speed-time", "60",
+                            "-r", f"{start + have}-{end}", direct,
+                        ],
+                        stdout=fh,
+                    )
                 if part.stat().st_size != expect:
                     raise IOError(f"chunk {i}: {part.stat().st_size} != {expect}")
                 return
             except Exception as e:  # noqa: BLE001
                 print(f"    retry chunk {i} ({attempt+1}): {e}", flush=True)
+                time.sleep(2)
         raise SystemExit(f"chunk {i} failed")
 
     with ThreadPoolExecutor(max_workers=conn) as pool:
