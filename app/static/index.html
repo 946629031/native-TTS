@@ -1,0 +1,111 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>native-TTS</title>
+  <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+<div class="app">
+  <header>
+    <div class="brand">
+      <span class="logo">◍</span>
+      <h1>native-TTS</h1>
+      <span class="sub">中英混读 · 本地合成</span>
+    </div>
+    <div id="status" class="status loading">
+      <span class="dot"></span><span id="statusText">模型加载中…</span>
+    </div>
+  </header>
+
+  <main>
+    <section class="card controls">
+      <div class="row">
+        <label class="field grow">
+          <span>音色</span>
+          <select id="voice"></select>
+        </label>
+        <label class="field">
+          <span>语言</span>
+          <select id="lang">
+            <option value="auto">自动</option>
+            <option value="chinese">中文</option>
+            <option value="english">英文</option>
+          </select>
+        </label>
+        <label class="field toggle">
+          <input type="checkbox" id="normalize" checked>
+          <span>文本规范化</span>
+        </label>
+      </div>
+
+      <div class="row style-row">
+        <span class="row-label">风格</span>
+        <div class="chips" id="chips">
+          <button class="chip active" data-instruct="">默认</button>
+          <button class="chip" data-instruct="像跟朋友聊天一样，轻松自然，语速稍快">自然聊天</button>
+          <button class="chip" data-instruct="温柔一点，语速慢一些，像在讲睡前故事">温柔</button>
+          <button class="chip" data-instruct="像新闻播报，吐字清晰，正式">播报</button>
+          <button class="chip" data-instruct="情绪有点激动，语速偏快，像在争论">激动</button>
+        </div>
+        <input id="instruct" class="instruct" placeholder="或自定义，如：英文用自然的美式发音">
+      </div>
+    </section>
+
+    <section class="card editor">
+      <textarea id="text" maxlength="2000" spellcheck="false"
+        placeholder="输入要朗读的文本，中英混排也可以。&#10;&#10;例：这个 API 的 latency 大概两百毫秒，完全可以接受。"></textarea>
+      <div class="meta">
+        <span id="count">0 字</span>
+        <span class="sep">·</span>
+        <span id="estimate">约 0.0 秒</span>
+        <div class="meta-actions">
+          <button id="sample" class="link">填入示例</button>
+          <button id="clear" class="link">清空</button>
+        </div>
+      </div>
+
+      <div class="actions">
+        <button id="generate" class="primary" disabled>
+          <span class="icon">▶</span> 生成 <kbd>⌘↵</kbd>
+        </button>
+        <div id="progress" class="progress hidden">
+          <div class="bar"><i></i></div>
+          <span id="progressText">生成中…</span>
+        </div>
+      </div>
+      <div id="error" class="error hidden"></div>
+    </section>
+
+    <section id="playerCard" class="card player hidden">
+      <div class="player-head">
+        <span class="tag" id="playerVoice">Serena</span>
+        <span class="player-dur" id="playerDur"></span>
+      </div>
+      <audio id="player" controls preload="auto"></audio>
+      <div class="player-actions">
+        <a id="download" class="link" download>下载 wav</a>
+        <button id="copy" class="link">复制文件路径</button>
+        <button id="regen" class="link">用当前设置重生成</button>
+      </div>
+    </section>
+
+    <section class="card history">
+      <div class="history-head">
+        <h2>最近生成</h2>
+        <button id="refresh" class="link">刷新</button>
+      </div>
+      <ul id="historyList" class="history-list">
+        <li class="empty">还没有生成记录</li>
+      </ul>
+    </section>
+  </main>
+
+  <footer>
+    <span>本地运行 · 模型 Qwen3-TTS 0.6B · 音频仅存于本机</span>
+  </footer>
+</div>
+<script src="/app.js"></script>
+</body>
+</html>

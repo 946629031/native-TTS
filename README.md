@@ -48,6 +48,27 @@ afplay outputs/smoke.wav
 
 > `models/` 已在 `.gitignore` 中，权重不进仓库。
 
+## 网页版（已可用）
+
+```bash
+./start.command          # 双击也可以；自动打开 http://127.0.0.1:8765
+# 或手动：
+.venv/bin/python app/server.py
+```
+
+功能：音色下拉（带描述）、语言 auto/中/英、风格预设 + 自定义指令、文本规范化开关、生成/试听/下载、最近 8 条历史（可重播）。
+
+接口（方便以后接菜单栏或别的程序）：
+
+```
+GET  /api/health
+GET  /api/voices
+GET  /api/history
+POST /api/tts   {text, voice, lang, instruct, normalize}
+```
+
+实测（M2）：4.3 秒音频耗时约 3.1 秒；11.6 秒音频耗时约 8.2 秒（RTF ≈ 0.7，含文本处理）。
+
 ## 下一步
 
 1. 用 `eval/cases-zh-en.md` 跑完整 30 条，测 RTF 与中英边界听感。
