@@ -4,7 +4,7 @@
 
 - 模型：Qwen3-TTS 0.6B（MLX 8-bit，Apache-2.0）
 - 运行：Apple Silicon 本地推理，不联网、不上传文本
-- 形态：网页版（已可用）+ 命令行
+- 形态：网页版 + 右键朗读 + 命令行
 
 ---
 
@@ -48,6 +48,8 @@ kill $(lsof -ti tcp:8765)
 ```
 
 > 服务只监听本机 `127.0.0.1`，同一局域网的其他设备访问不到。
+
+> 想选中文字直接右键朗读？装一次即可，见 [第五节](#五右键朗读选中即读)。
 
 ---
 
@@ -155,7 +157,53 @@ afplay outputs/a.wav
 
 ---
 
-## 五、常见问题
+## 五、右键朗读（选中即读）
+
+选中一段文字 → 右键 → **服务（Services）** → **用 native-TTS 朗读**。
+
+### 安装（一次）
+
+```bash
+./services/install.sh
+```
+
+然后打开 **系统设置 → 键盘 → 键盘快捷键 → 服务 → 文本**，确认「用 native-TTS 朗读」已勾选。
+
+### 使用
+
+1. 在任意 App 里选中文字（Safari、备忘录、VS Code、PDF…）
+2. 右键 → 服务 → 用 native-TTS 朗读
+3. 第一次会自动在后台启动服务、加载模型（约 10 秒），之后直接出声
+
+再点一次会打断上一次朗读，换成新选中的内容。长文本会自动按句子分块（约 800 字一块）连续播放。
+
+### 配一个快捷键（推荐）
+
+系统设置 → 键盘 → 键盘快捷键 → 服务 → 文本 → 找到「用 native-TTS 朗读」→ 双击右侧 → 按 `⌥⌘S`。
+
+之后：选中文字 → `⌥⌘S`，比右键快得多。
+
+### 换音色 / 风格
+
+默认用 `Serena`。新建 `~/.config/native-tts/config.json`：
+
+```json
+{"voice": "Serena", "lang": "auto", "instruct": "像跟朋友聊天，轻松自然", "normalize": true}
+```
+
+下一次朗读生效，不用重启服务。可选音色见上方音色表。
+
+### 卸载
+
+```bash
+./services/uninstall.sh
+```
+
+日志：`/tmp/native-tts-speak.log`（朗读）、`/tmp/native-tts-server.log`（后台服务）。
+
+---
+
+## 六、常见问题
 
 | 现象 | 原因 / 处理 |
 | --- | --- |
@@ -168,10 +216,13 @@ afplay outputs/a.wav
 | 英文发音怪 | 换成 `Ryan` / `Aiden`，或在风格里写「英文用自然的美式发音」 |
 | 中文像播音腔 | 换 `Serena`，风格选「自然聊天」，减少逗号 |
 | 文本超限 | 单次 2000 字，分段生成 |
+| 右键菜单里没有「用 native-TTS 朗读」 | 到「系统设置 → 键盘 → 键盘快捷键 → 服务 → 文本」勾选；仍没有就重跑 `./services/install.sh` 并重启一次 |
+| 右键朗读第一次很慢 | 后台服务没启动，正在加载模型；加载完会常驻，后续直接出声 |
+| 右键朗读失败 | 看日志：`tail -20 /tmp/native-tts-speak.log` |
 
 ---
 
-## 六、项目结构
+## 七、项目结构
 
 ```
 native-TTS/
@@ -179,8 +230,13 @@ native-TTS/
 ├── app/
 │   ├── server.py              # 本地服务（模型常驻 + HTTP API）
 │   └── static/                # 单页 UI（HTML/CSS/JS）
+├── services/
+│   ├── install.sh             # 安装右键服务（写入 ~/Library/Services）
+│   ├── uninstall.sh           # 卸载右键服务
+│   └── template/              # Automator .workflow 模板
 ├── scripts/
 │   ├── say.py                 # 命令行合成
+│   ├── speak_stdin.py         # 右键朗读：stdin → 合成 → afplay
 │   ├── normalize_text.py      # 文本规范化
 │   └── fetch_modelscope.py    # 模型下载（多连接 + 断点续传）
 ├── models/                    # 模型权重（.gitignore，不入库）
@@ -189,7 +245,7 @@ native-TTS/
 └── docs/research/             # 调研笔记
 ```
 
-HTTP 接口（方便以后接菜单栏或别的程序）：
+HTTP 接口（右键服务和别的程序都用它）：
 
 ```
 GET  /api/health              -> {status, error}
@@ -202,7 +258,7 @@ POST /api/tts                 -> {id, url, path, duration, ...}
 
 ---
 
-## 七、从零安装（换机器时）
+## 八、从零安装（换机器时）
 
 前置：macOS + Apple Silicon，已装 Homebrew / Python 3.10+。
 
@@ -227,7 +283,7 @@ afplay outputs/smoke.wav
 
 ---
 
-## 八、调研结论速览
+## 九、调研结论速览
 
 - **自然度的瓶颈通常不在声学模型，而在「文本前端 + 整句合成 + 参考音色」**：不要按语言切段再拼接。
 - 本机首选 **Qwen3-TTS 0.6B（MLX 8-bit）**：中英 WER 第一梯队、1 GB 级权重、支持流式。
@@ -244,7 +300,7 @@ afplay outputs/smoke.wav
 
 ---
 
-## 九、环境备注（本机网络实测）
+## 十、环境备注（本机网络实测）
 
 - 可访问：ModelScope、阿里云 DashScope、火山引擎、MiniMax、腾讯云、ElevenLabs API、Inworld
 - 不可直连：huggingface.co、pypi.org、github.com、OpenAI、fish.audio

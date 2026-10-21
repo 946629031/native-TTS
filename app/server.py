@@ -149,9 +149,13 @@ class Handler(SimpleHTTPRequestHandler):
     def __init__(self, *a, **kw):
         super().__init__(*a, directory=str(STATIC), **kw)
 
-    def log_message(self, fmt, *args):  # 安静一点
-        if "/api/" in (args[0] if args else ""):
-            print(f"[http] {args[0]}", flush=True)
+    def log_message(self, fmt, *args):  # 安静一点：只打 API 请求
+        try:
+            msg = fmt % args
+        except Exception:  # noqa: BLE001
+            msg = str(fmt)
+        if "/api/" in msg:
+            print(f"[http] {msg}", flush=True)
 
     def _json(self, obj, code=200):
         body = json.dumps(obj, ensure_ascii=False).encode("utf-8")
