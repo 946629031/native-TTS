@@ -4,7 +4,7 @@
 
 - 模型：Qwen3-TTS 0.6B（MLX 8-bit，Apache-2.0）
 - 运行：Apple Silicon 本地推理，不联网、不上传文本
-- 形态：网页版 + 右键朗读 + 命令行
+- 形态：网页版 + 菜单栏 App + 右键朗读 + 命令行
 
 ---
 
@@ -50,6 +50,8 @@ kill $(lsof -ti tcp:8765)
 > 服务只监听本机 `127.0.0.1`，同一局域网的其他设备访问不到。
 
 > 想选中文字直接右键朗读？装一次即可，见 [第五节](#五右键朗读选中即读)。
+
+> 想常驻菜单栏、随手输入朗读？见 [第六节](#六菜单栏-app)。
 
 ---
 
@@ -203,7 +205,50 @@ afplay outputs/a.wav
 
 ---
 
-## 六、常见问题
+## 六、菜单栏 App
+
+菜单栏常驻一个波形图标，点开就是一个小面板：输入文字、选音色、朗读、读剪贴板、停止、打开网页。
+
+### 安装
+
+```bash
+./menubar/install.sh
+```
+
+会编译并安装到 `~/Applications/native-TTS.app`，然后自动启动。
+
+### 使用
+
+- 点菜单栏右上角的波形图标打开面板
+- 输入文字 → 点「朗读」或按 `⌘↩`
+- 「剪贴板」直接朗读当前剪贴板内容
+- 播放中会多出「停止」按钮
+- App 启动时自动拉起后台服务；退出 App 后服务继续运行，右键朗读不受影响
+- 后台服务被手动杀掉时，App 会在 5 秒内自动拉回来
+
+### 开机自启
+
+系统设置 → 通用 → 登录项 → 点「+」→ 选择 `~/Applications/native-TTS.app`。
+
+### 开发
+
+```bash
+./menubar/build.sh                 # 只编译到 dist/native-TTS.app
+./menubar/uninstall.sh             # 卸载
+./dist/native-TTS.app/Contents/MacOS/NativeTTS --snapshot /tmp/panel.png   # 离屏渲染面板
+```
+
+源码在 `menubar/Sources/`，纯 SwiftUI + AppKit，没有第三方依赖。
+
+### 说明
+
+- 未签名、未公证，仅本机自用；换机器需要重新编译
+- 仓库路径在编译时写进 Info.plist，移动仓库后重跑 `./menubar/install.sh`
+- 默认音色同样读 `~/.config/native-tts/config.json`
+
+---
+
+## 七、常见问题
 
 | 现象 | 原因 / 处理 |
 | --- | --- |
@@ -219,10 +264,13 @@ afplay outputs/a.wav
 | 右键菜单里没有「用 native-TTS 朗读」 | 到「系统设置 → 键盘 → 键盘快捷键 → 服务 → 文本」勾选；仍没有就重跑 `./services/install.sh` 并重启一次 |
 | 右键朗读第一次很慢 | 后台服务没启动，正在加载模型；加载完会常驻，后续直接出声 |
 | 右键朗读失败 | 看日志：`tail -20 /tmp/native-tts-speak.log` |
+| 菜单栏没有波形图标 | 确认 App 在运行：`pgrep -fl NativeTTS`；没有就 `open ~/Applications/native-TTS.app` |
+| 菜单栏 App 点朗读报连接失败 | 服务没起来；点面板里的「重试」，或看 `/tmp/native-tts-server.log` |
+| 菜单栏 App 重建后还是旧界面 | 安装脚本会先杀掉旧进程；若从 `dist/` 直接启动，手动 `pkill -f NativeTTS` 再开 |
 
 ---
 
-## 七、项目结构
+## 八、项目结构
 
 ```
 native-TTS/
@@ -234,6 +282,12 @@ native-TTS/
 │   ├── install.sh             # 安装右键服务（写入 ~/Library/Services）
 │   ├── uninstall.sh           # 卸载右键服务
 │   └── template/              # Automator .workflow 模板
+├── menubar/
+│   ├── Sources/               # 菜单栏 App（SwiftUI + AppKit）
+│   ├── build.sh               # 编译到 dist/native-TTS.app
+│   ├── install.sh             # 安装到 ~/Applications
+│   └── uninstall.sh           # 卸载
+├── dist/                      # App 构建产物（.gitignore）
 ├── scripts/
 │   ├── say.py                 # 命令行合成
 │   ├── speak_stdin.py         # 右键朗读：stdin → 合成 → afplay
@@ -258,7 +312,7 @@ POST /api/tts                 -> {id, url, path, duration, ...}
 
 ---
 
-## 八、从零安装（换机器时）
+## 九、从零安装（换机器时）
 
 前置：macOS + Apple Silicon，已装 Homebrew / Python 3.10+。
 
@@ -283,7 +337,7 @@ afplay outputs/smoke.wav
 
 ---
 
-## 九、调研结论速览
+## 十、调研结论速览
 
 - **自然度的瓶颈通常不在声学模型，而在「文本前端 + 整句合成 + 参考音色」**：不要按语言切段再拼接。
 - 本机首选 **Qwen3-TTS 0.6B（MLX 8-bit）**：中英 WER 第一梯队、1 GB 级权重、支持流式。
@@ -300,7 +354,7 @@ afplay outputs/smoke.wav
 
 ---
 
-## 十、环境备注（本机网络实测）
+## 十一、环境备注（本机网络实测）
 
 - 可访问：ModelScope、阿里云 DashScope、火山引擎、MiniMax、腾讯云、ElevenLabs API、Inworld
 - 不可直连：huggingface.co、pypi.org、github.com、OpenAI、fish.audio

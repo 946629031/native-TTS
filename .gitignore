@@ -22,6 +22,7 @@ checkpoints/
 # 生成产物
 outputs/
 samples/generated/
+dist/
 *.wav
 *.mp3
 *.flac
